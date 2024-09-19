@@ -407,10 +407,35 @@ exports.postgresQuery = function (connectionString, query) {
  */
 exports.mysqlQuery = function (connectionString, query, password = undefined) {
     return new Promise((resolve, reject) => {
-        const connection = mysql.createConnection({
-            uri: connectionString,
-            password
-        });
+
+        // 判断是否ob
+        const regex = /^mysql:\/\/.*@.*#.*:@.*:.*$/;
+        if ( regex.test(connectionString) ) {
+
+            const regex = /^mysql:\/\/(.*):@(.*):(.*)$/;
+            const match = connectionString.match(regex);
+            
+            if (match) {
+                ob_details = {
+                    username: match[1],   // 提取的用户名
+                    host: match[2],       // 提取的主机名
+                    port: match[3]        // 提取的端口号
+                };
+                const connection = mysql.createConnection({
+                    host: ob_details.host,
+                    port: ob_details.port,
+                    user: ob_details.username,
+                    password: password,
+                });
+            } else {
+                reject("OB连接解析异常！"); // 无匹配
+            }
+        } else {
+            const connection = mysql.createConnection({
+                uri: connectionString,
+                password
+            });
+        }
 
         connection.on("error", (err) => {
             reject(err);
